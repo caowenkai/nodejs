@@ -1,0 +1,84 @@
+简单介绍流
+一般处理数据有两种模式, buffer模式和stream模式, buffer模式就是取完数据一次性操作, stream模式就是边取数据边操作.
+
+例如如果打开一个8G的文件, 用buffer模式就是先分配2G的内存, 把文件全部读出来, 然后开始操作内存, 而用流模式的方法就是边读数据, 边开始处理.
+
+从这里看出stream模式无论是在空间和时间上都优于buffer模式:在空间上, 内存只会占用当前需要处理的一块数据区域的大小, 而不是整个文件.在时间上, 因为不需要全部的数据就可以开始处理, 时间就相当于节约了, 从串行变成了并行操作(这里的并行不是多线程的并行, 而是生产者和消费者并行).
+
+美团在流的进阶篇中就有介绍其作用的一个实例
+
+const fs = require('fs');
+fs.readFile(file, function (err, body) {
+        console.log(body);
+        console.log(body.toString());
+})
+然后如果文件过大就会出现如下情况
+
+
+报错的原因是body这个Buffer对象的长度过大，导致toString方法失败。
+
+可见，这种一次获取全部内容的做法，不适合操作大文件。
+
+可以考虑使用流来读取文件内容。
+
+const fs = require('fs');
+fs.createReadStream(file).pipe(process.stdout);
+fs.createReadStream创建一个可读流，连接了源头（上游，文件）和消耗方（下游，标准输出）。
+
+
+
+还有一个好处就是链式调用, 也就是可组合操作, 大大增加了代码的可重用性.比如下面这个代码(中间的pipe可以很方便的增删):
+
+fs.createReadStream(file)
+        .pipe(zlib.createGzip())
+        //.pipe(crypto.createCipher('aes192', 'secret'))
+        .pipe(req) .on('finish', function() {
+        console.log('File succesfully sent');
+});
+深入了解
+后面的介绍会涉及到下面的3各方面，今天只详细解读第一部分
+
+1.流的基本类型，以及Stream模块的基本使用方法
+
+2.流式处理与back pressure的工作原理
+
+3.如何开发流式程序，包括对Gulp与Browserify的剖析，以及一个实战示例。
+
+流的四种类型
+Stream提供了以下四种类型的流：
+
+var  Stream =require('stream')
+var  Readable = Stream.Readable
+var  Writable = Stream.Writable
+var  Duplex = Stream.Duplex
+var  Transform = Stream.Transform
+使用Stream可实现数据的流式处理，如：
+
+var fs = require('fs')
+// `fs.createReadStream`创建一个`Readable`对象以读取`bigFile`的内容，并输出到标准输出
+// 如果使用`fs.readFile`则可能由于文件过大而失败
+fs.createReadStream(bigFile).pipe(process.stdout)
+Readable：创建可读流。
+
+Writable：创建可写流。
+
+Duplex：创建可读可写流。
+
+Transform：在Transform中可写端写入的数据经变换后会自动添加到可读端。
+
+（详细例子可以参考如下流-基础篇-美团）
+
+
+
+今天先到这里，后面第二篇会详细讲解到流背后的工作原理，以及如何实现流式数据处理和back presure机制
+参考：
+
+Node.js流模式编程详解
+
+流-基础篇-美团
+
+流-进阶篇-美团
+
+流-实战篇-美团
+
+
